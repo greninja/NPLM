@@ -13,8 +13,9 @@ def data_generate(filename):
 
 	with open(filename,'r') as f:
 		text = f.read()
-	
-	data = re.findall('\w+',text)
+	regex = re.compile(r'\([^)]*\)') 
+	sub_text = regex.sub('',text)
+	data = re.findall('\w+',sub_text)
 	return data
 
 
@@ -218,6 +219,7 @@ with tf.Session(graph=graph) as session:
 
 final_embeddings = normalized_embeddings.eval(session=session)
 print(final_embeddings)
+
 
 
 
