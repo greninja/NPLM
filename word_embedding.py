@@ -13,15 +13,12 @@ FILE_PATH = '/home/shadab/python/testing/t1'
 
 def data_generate(filename):
 
-		with open(filename,'r') as f:
-			text = f.read()
-		regex = re.compile(r'\([^)]*\)') 
-		sub_text = regex.sub('',text)
-		data = re.findall('\w+',sub_text)
-		return data
-
-
-words = data_generate(FILE_PATH)
+	with open(filename,'r') as f:
+		text = f.read()
+	regex = re.compile(r'\([^)]*\)') 
+	sub_text = regex.sub('',text)
+	data = re.findall('\w+',sub_text)
+	return data
 
 def wordDictionary(filename):
 	# Generate the data
@@ -38,8 +35,6 @@ def wordDictionary(filename):
 			index += 1
 
 	return word_dict
-
-
 
 def build_dataset(words):
 	
@@ -63,10 +58,6 @@ def build_dataset(words):
 	count[0][1] = rare_count
 	reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
 	return data, count, dictionary, reverse_dictionary
-
-data,count,dictionary,reverse_dictionary = build_dataset(words)
-
-data_index = 0
 
 def generate_batch(batch_size,skip_window,num_skips):
 	global data_index
@@ -101,9 +92,10 @@ def generate_batch(batch_size,skip_window,num_skips):
 
 	return batch, labels
 
+"""
 batch, labels = generate_batch(batch_size=8, num_skips=2, skip_window=1)
 
-"""
+
 print ('data :', [reverse_dictionary[d] for d in data[:8]])
 
 for i in range(8):
@@ -112,16 +104,13 @@ for i in range(8):
 
 """
 
-def skip_gram(batch_size,embedding_size,skip_window,num_skips):
+def skip_gram():
 	
-	if batch_size is None:
-		batch_size = 128
-	if embedding_size is None:
-		embedding_size = 128 # Feature vector size
-	if skip_window is None:
-		skip_window = 1
-	if num_skips is None:
-		num_skips = 2
+	
+	batch_size = args.batch_size
+	embedding_size = args.embedding_size # Feature vector size
+	skip_window = args.skip_window
+	num_skips = args.num_skips
 
 	# Negative sampling
 
@@ -137,115 +126,101 @@ def skip_gram(batch_size,embedding_size,skip_window,num_skips):
 	with graph.as_default():
 
 
-	# Inputs
-	train_inputs = tf.placeholder(tf.int32,shape=[batch_size])
-	train_labels = tf.placeholder(tf.int32,shape=[batch_size,1])
-	valid_dataset = tf.constant(valid_examples,dtype=tf.int32)
+		# Inputs
+		train_inputs = tf.placeholder(tf.int32,shape=[batch_size])
+		train_labels = tf.placeholder(tf.int32,shape=[batch_size,1])
+		valid_dataset = tf.constant(valid_examples,dtype=tf.int32)
 
-	with tf.device('/cpu:0'):
+		with tf.device('/cpu:0'):
 
-		embeddings = tf.Variable(tf.random_uniform([vocabulary_size,embedding_size], \
-												-1.0,1.0))
+			embeddings = tf.Variable(tf.random_uniform([vocabulary_size,embedding_size], \
+													-1.0,1.0))
 
-		embed = tf.nn.embedding_lookup(embeddings,train_inputs)
+			embed = tf.nn.embedding_lookup(embeddings,train_inputs)
 
-		
-		# Construct the variables for the NCE loss
-		nce_weights = tf.Variable(
-			tf.truncated_normal([vocabulary_size, embedding_size],
-							stddev=1.0 / math.sqrt(embedding_size)))
-		nce_biases = tf.Variable(tf.zeros([vocabulary_size]))
-	
-	# Computing NCE loss
-	loss = tf.reduce_mean(
-	tf.nn.nce_loss(weights=nce_weights,
+
+			# Construct the variables for the NCE loss
+			nce_weights = tf.Variable(
+				tf.truncated_normal([vocabulary_size, embedding_size],
+								stddev=1.0 / math.sqrt(embedding_size)))
+			nce_biases = tf.Variable(tf.zeros([vocabulary_size]))
+
+		# Computing NCE loss
+		loss = tf.reduce_mean(
+		tf.nn.nce_loss(weights=nce_weights,
 				 biases=nce_biases,
 				 labels=train_labels,
 				 inputs=embed,
 				 num_sampled=num_sampled,
 				 num_classes=vocabulary_size))
 
-	# Construct the SGD optimizer using a learning rate of 1.0.
-	optimizer = tf.train.GradientDescentOptimizer(1.5).minimize(loss)
+		# Construct the SGD optimizer using a learning rate of 1.0.
+		optimizer = tf.train.GradientDescentOptimizer(1.0).minimize(loss)
 
-	# Compute the cosine similarity between minibatch valid_examples and all embeddings.
-	norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
-	normalized_embeddings = embeddings / norm
-	valid_embeddings = tf.nn.embedding_lookup(
-	   normalized_embeddings, valid_dataset)
-	similarity = tf.matmul(
-	  valid_embeddings, normalized_embeddings, transpose_b=True)
+		# Compute the cosine similarity between minibatch valid_examples and all embeddings.
+		norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
+		normalized_embeddings = embeddings / norm
+		valid_embeddings = tf.nn.embedding_lookup(
+		normalized_embeddings, valid_dataset)
+		similarity = tf.matmul(
+		valid_embeddings, normalized_embeddings, transpose_b=True)
 
-	# Add variable initializer.
-	init = tf.global_variables_initializer()
+		# Add variable initializer.
+		init = tf.global_variables_initializer()
 
-	# Step 5: Begin training.
-	num_steps = 10000
+		# Step 5: Begin training.
+		num_steps = 10000
 
-	with tf.Session(graph=graph) as session:
-	# We must initialize all variables before we use them.
-		init.run()
-		print("Initialized")
+		with tf.Session(graph=graph) as session:
+		# We must initialize all variables before we use them.
+			init.run()
+			print("Initialized")
 
-		average_loss = 0
-		for step in xrange(num_steps):
-			batch_inputs, batch_labels = generate_batch(
-				batch_size, num_skips, skip_window)
-			feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels}
+			average_loss = 0
+			for step in xrange(num_steps):
+				batch_inputs, batch_labels = generate_batch(
+					batch_size, num_skips, skip_window)
+				feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels}
 
-			# We perform one update step by evaluating the optimizer op (including it
-			# in the list of returned values for session.run()
-			_, loss_val = session.run([optimizer, loss], feed_dict=feed_dict)
-			average_loss += loss_val
+				# We perform one update step by evaluating the optimizer op (including it
+				# in the list of returned values for session.run()
+				_, loss_val = session.run([optimizer, loss], feed_dict=feed_dict)
+				average_loss += loss_val
 
-			if step % 2000 == 0:
-			  if step > 0:
-				average_loss /= 2000
-			  # The average loss is an estimate of the loss over the last 2000 batches.
-			  print("Average loss at step ", step, ": ", average_loss)
-			  average_loss = 0
+				if step % 2000 == 0:
+				  if step > 0:
+					average_loss /= 2000
+				  # The average loss is an estimate of the loss over the last 2000 batches.
+				  print("Average loss at step ", step, ": ", average_loss)
+				  average_loss = 0
 
-	"""
-	# Note that this is expensive (~20% slowdown if computed every 500 steps)
-	if step % 10000 == 0:
-	  sim = similarity.eval()
-	  for i in xrange(valid_size):
-		valid_word = reverse_dictionary[valid_examples[i]]
-		top_k = 8  # number of nearest neighbors
-		nearest = (-sim[i, :]).argsort()[1:top_k + 1]
-		log_str = "Nearest to %s:" % valid_word
-		for k in xrange(top_k):
-		  close_word = reverse_dictionary[nearest[k]]
-		  log_str = "%s %s," % (log_str, close_word)
-		print(log_str)
-	"""
-
-
-		final_embeddings = normalized_embeddings.eval(session=session)
-		return final_embeddings
-
-
+		
+			final_embeddings = normalized_embeddings.eval(session=session)
+	
+	return final_embeddings
 
 
 if __name__=="__main__":
 
-
 	parser = argparse.ArgumentParser(description="Parameters for skip gram model")
 
-	parser.add_argument('batch_size',action='store',type=int, \
+	parser.add_argument('-b','--batch_size',action='store',type=int, default=128,\
 						help='batch_size for training the model')
-	parser.add_argument('embedding_size',action='store',type=int \
+	parser.add_argument('-e','--embedding_size',action='store',type=int, default=128,\
 						help = 'Number of the dimensions of the feature vector')
-	parser.add_argument('skip_window',action='store',type=int \
+	parser.add_argument('-s','--skip_window',action='store',type=int, default=1, \
 						help = 'Window size of the words around the context word')
-	arser.add_argument('num_skips',action='store',type=int \
+	parser.add_argument('-ns','--num_skips',action='store',type=int, default=2,\
 						help = 'Number of times an input can be used in each batch')
 		
 	args = parser.parse_args()
+	
+	words = data_generate(FILE_PATH)
+	data,count,dictionary,reverse_dictionary = build_dataset(words)
+	data_index = 0
 
-	skip_gram(args.batch_size,args.embedding_size,args.skip_window,args.num_skips)
-
-
+	word_embeddings = skip_gram()
+	
 
 
 
