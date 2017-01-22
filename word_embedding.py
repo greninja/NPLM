@@ -8,18 +8,20 @@ import tensorflow as tf
 import math
 # Import One hot encoder here
 
+vocabulary_size = 400
+FILE_PATH = '/home/shadab/python/testing/t1'
 
 def data_generate(filename):
 
-	with open(filename,'r') as f:
-		text = f.read()
-	regex = re.compile(r'\([^)]*\)') 
-	sub_text = regex.sub('',text)
-	data = re.findall('\w+',sub_text)
-	return data
+		with open(filename,'r') as f:
+			text = f.read()
+		regex = re.compile(r'\([^)]*\)') 
+		sub_text = regex.sub('',text)
+		data = re.findall('\w+',sub_text)
+		return data
 
 
-words = data_generate('/home/shadab/python/testing/t1')
+words = data_generate(FILE_PATH)
 
 def wordDictionary(filename):
 	# Generate the data
@@ -37,7 +39,7 @@ def wordDictionary(filename):
 
 	return word_dict
 
-vocabulary_size = 400
+
 
 def build_dataset(words):
 	
@@ -110,25 +112,29 @@ for i in range(8):
 
 """
 
-# Building the actual skip gram model
+def skip_gram(batch_size,embedding_size,skip_window,num_skips):
+	
+	if batch_size is None:
+		batch_size = 128
+	if embedding_size is None:
+		embedding_size = 128 # Feature vector size
+	if skip_window is None:
+		skip_window = 1
+	if num_skips is None:
+		num_skips = 2
 
-batch_size = 128
-embedding_size = 128 # Feature vector size
-skip_window = 1
-num_skips = 2
+	# Negative sampling
 
-# Negative sampling
+	valid_size = 16
+	valid_window = 100
+	valid_examples = np.random.choice(valid_window,valid_size,replace=False)
+	num_sampled = 64 # Number of negative samples to sample.
 
-valid_size = 16
-valid_window = 100
-valid_examples = np.random.choice(valid_window,valid_size,replace=False)
-num_sampled = 64 # Number of negative samples to sample.
+	# Creating the computation graph
 
-# Creating the computation graph
+	graph = tf.Graph()
 
-graph = tf.Graph()
-
-with graph.as_default():
+	with graph.as_default():
 
 
 	# Inputs
@@ -149,23 +155,20 @@ with graph.as_default():
 			tf.truncated_normal([vocabulary_size, embedding_size],
 							stddev=1.0 / math.sqrt(embedding_size)))
 		nce_biases = tf.Variable(tf.zeros([vocabulary_size]))
+	
+	# Computing NCE loss
+	loss = tf.reduce_mean(
+	tf.nn.nce_loss(weights=nce_weights,
+				 biases=nce_biases,
+				 labels=train_labels,
+				 inputs=embed,
+				 num_sampled=num_sampled,
+				 num_classes=vocabulary_size))
 
-
-
-		# Computing NCE loss
-
-		loss = tf.reduce_mean(
-		tf.nn.nce_loss(weights=nce_weights,
-					 biases=nce_biases,
-					 labels=train_labels,
-					 inputs=embed,
-					 num_sampled=num_sampled,
-					 num_classes=vocabulary_size))
-
-  # Construct the SGD optimizer using a learning rate of 1.0.
+	# Construct the SGD optimizer using a learning rate of 1.0.
 	optimizer = tf.train.GradientDescentOptimizer(1.5).minimize(loss)
 
-  # Compute the cosine similarity between minibatch valid_examples and all embeddings.
+	# Compute the cosine similarity between minibatch valid_examples and all embeddings.
 	norm = tf.sqrt(tf.reduce_sum(tf.square(embeddings), 1, keep_dims=True))
 	normalized_embeddings = embeddings / norm
 	valid_embeddings = tf.nn.embedding_lookup(
@@ -173,34 +176,34 @@ with graph.as_default():
 	similarity = tf.matmul(
 	  valid_embeddings, normalized_embeddings, transpose_b=True)
 
-  # Add variable initializer.
+	# Add variable initializer.
 	init = tf.global_variables_initializer()
 
-# Step 5: Begin training.
-num_steps = 100001
+	# Step 5: Begin training.
+	num_steps = 10000
 
-with tf.Session(graph=graph) as session:
-  # We must initialize all variables before we use them.
-  init.run()
-  print("Initialized")
+	with tf.Session(graph=graph) as session:
+	# We must initialize all variables before we use them.
+		init.run()
+		print("Initialized")
 
-  average_loss = 0
-  for step in xrange(num_steps):
-	batch_inputs, batch_labels = generate_batch(
-		batch_size, num_skips, skip_window)
-	feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels}
+		average_loss = 0
+		for step in xrange(num_steps):
+			batch_inputs, batch_labels = generate_batch(
+				batch_size, num_skips, skip_window)
+			feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels}
 
-	# We perform one update step by evaluating the optimizer op (including it
-	# in the list of returned values for session.run()
-	_, loss_val = session.run([optimizer, loss], feed_dict=feed_dict)
-	average_loss += loss_val
+			# We perform one update step by evaluating the optimizer op (including it
+			# in the list of returned values for session.run()
+			_, loss_val = session.run([optimizer, loss], feed_dict=feed_dict)
+			average_loss += loss_val
 
-	if step % 2000 == 0:
-	  if step > 0:
-		average_loss /= 2000
-	  # The average loss is an estimate of the loss over the last 2000 batches.
-	  print("Average loss at step ", step, ": ", average_loss)
-	  average_loss = 0
+			if step % 2000 == 0:
+			  if step > 0:
+				average_loss /= 2000
+			  # The average loss is an estimate of the loss over the last 2000 batches.
+			  print("Average loss at step ", step, ": ", average_loss)
+			  average_loss = 0
 
 	"""
 	# Note that this is expensive (~20% slowdown if computed every 500 steps)
@@ -217,16 +220,30 @@ with tf.Session(graph=graph) as session:
 		print(log_str)
 	"""
 
-final_embeddings = normalized_embeddings.eval(session=session)
-print(final_embeddings)
+
+		final_embeddings = normalized_embeddings.eval(session=session)
+		return final_embeddings
 
 
 
 
+if __name__=="__main__":
 
 
+	parser = argparse.ArgumentParser(description="Parameters for skip gram model")
 
+	parser.add_argument('batch_size',action='store',type=int, \
+						help='batch_size for training the model')
+	parser.add_argument('embedding_size',action='store',type=int \
+						help = 'Number of the dimensions of the feature vector')
+	parser.add_argument('skip_window',action='store',type=int \
+						help = 'Window size of the words around the context word')
+	arser.add_argument('num_skips',action='store',type=int \
+						help = 'Number of times an input can be used in each batch')
+		
+	args = parser.parse_args()
 
+	skip_gram(args.batch_size,args.embedding_size,args.skip_window,args.num_skips)
 
 
 
