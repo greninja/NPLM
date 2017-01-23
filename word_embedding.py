@@ -1,4 +1,3 @@
-
 import re
 import argparse
 import collections
@@ -10,6 +9,8 @@ import math
 
 vocabulary_size = 400
 FILE_PATH = '/home/shadab/python/testing/t1'
+global data_index
+data_index = 0
 
 def data_generate(filename):
 
@@ -59,7 +60,7 @@ def build_dataset(words):
 	reverse_dictionary = dict(zip(dictionary.values(), dictionary.keys()))
 	return data, count, dictionary, reverse_dictionary
 
-def generate_batch(batch_size,skip_window,num_skips):
+def generate_batch(batch_size,skip_window,num_skips,data):
 	global data_index
 	assert batch_size % num_skips == 0
 	batch = np.ndarray(shape=(batch_size), dtype = np.int32)
@@ -94,17 +95,13 @@ def generate_batch(batch_size,skip_window,num_skips):
 
 """
 batch, labels = generate_batch(batch_size=8, num_skips=2, skip_window=1)
-
-
 print ('data :', [reverse_dictionary[d] for d in data[:8]])
-
 for i in range(8):
 	print(batch[i], reverse_dictionary[batch[i]], \
 			'->', labels[i, 0], reverse_dictionary[labels[i, 0]])
-
 """
 
-def skip_gram():
+def skip_gram(args,data):
 	
 	
 	batch_size = args.batch_size
@@ -179,7 +176,7 @@ def skip_gram():
 			average_loss = 0
 			for step in xrange(num_steps):
 				batch_inputs, batch_labels = generate_batch(
-					batch_size, num_skips, skip_window)
+					batch_size, num_skips, skip_window,data)
 				feed_dict = {train_inputs: batch_inputs, train_labels: batch_labels}
 
 				# We perform one update step by evaluating the optimizer op (including it
@@ -199,8 +196,7 @@ def skip_gram():
 	
 	return final_embeddings
 
-
-if __name__=="__main__":
+def main():
 
 	parser = argparse.ArgumentParser(description="Parameters for skip gram model")
 
@@ -214,18 +210,13 @@ if __name__=="__main__":
 						help = 'Number of times an input can be used in each batch')
 		
 	args = parser.parse_args()
-	
 	words = data_generate(FILE_PATH)
 	data,count,dictionary,reverse_dictionary = build_dataset(words)
-	data_index = 0
+	word_embeddings = skip_gram(args,data)
 
-	word_embeddings = skip_gram()
-	
-
+	return word_embeddings
 
 
 
-
-
-
-
+if __name__=="__main__":
+	main()
