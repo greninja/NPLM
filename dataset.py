@@ -1,29 +1,27 @@
 import itertools
-from sklearn.preprocessing import OneHotEncoder
-import re
-from pprint import pprint
 import  numpy as np 
-import tensorflow as tf
 from nltk.util import ngrams
+from collections import OrderedDict 
 
+#from sklearn.preprocessing import OneHotEncoder
+#import re
+#import tensorflow as tf
 
+def OneHotEncoding(ordered_dict):
 
-def OneHotEncoding(text):
-
-	# words = tf.Variable()
-	words = re.findall('\w+',text)	
-
-	# One Hot Encoding
-	word_vec = [np.zeros(len(words),dtype=int) for _ in xrange(len(words))]
-
-	length = len(words)
-
-	for i in xrange(length):
-		word_vec[i][i] = 1
-
-	word_dict = { word : word_vec[i] for word,i in words,len(xrange(word_vec))}
 	
-	return word_vec
+	
+	OneHotEncoding_vector = [np.zeros(len(ordered_dict),dtype=int) \
+						 		for _ in xrange(len(ordered_dict))]
+
+	# A mapping of words and its vector representation
+	WordVecDict = OrderedDict()
+
+	for key,value in ordered_dict.iteritems():
+		OneHotEncoding_vector[value][value] = 1	
+		WordVecDict[key] = OneHotEncoding_vector[value]
+	
+	return WordVecDict
 
 
 def n_gram(text):

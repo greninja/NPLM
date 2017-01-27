@@ -7,10 +7,17 @@ import tensorflow as tf
 import math
 # Import One hot encoder here
 
-vocabulary_size = 400
+vocabulary_size = 379
 FILE_PATH = '/home/shadab/python/testing/t1'
 global data_index
 data_index = 0
+
+def cosine_similarity(vec1,vec2):
+	assert len(vec1)==len(vec2)
+	numerator = sum(map(lambda x,y : x * y, vec1,vec2)) 
+	denominator = math.sqrt((sum(map(lambda x : x**2 , vec1))) * (sum(map(lambda x : x ** 2, vec2))))
+	assert denominator != 0
+	return float(numerator) / denominator 
 
 def data_generate(filename):
 
@@ -166,7 +173,7 @@ def skip_gram(args,data):
 		init = tf.global_variables_initializer()
 
 		# Step 5: Begin training.
-		num_steps = 10000
+		num_steps =  10000
 
 		with tf.Session(graph=graph) as session:
 		# We must initialize all variables before we use them.
@@ -193,8 +200,10 @@ def skip_gram(args,data):
 
 		
 			final_embeddings = normalized_embeddings.eval(session=session)
+			
 	
 	return final_embeddings
+
 
 def main():
 
@@ -212,9 +221,10 @@ def main():
 	args = parser.parse_args()
 	words = data_generate(FILE_PATH)
 	data,count,dictionary,reverse_dictionary = build_dataset(words)
+	#print data
+	
 	word_embeddings = skip_gram(args,data)
-
-	return word_embeddings
+	print word_embeddings
 
 
 
