@@ -12,8 +12,9 @@ def get_embeddings():
 # vocablen = len(embeddings)
  # biases
  # hidden layer biases
-def gen_batch():
-
+ def get_batch(X, size):
+     a = np.random.choice(len(X), size, replace=False)
+ 	 return X[a]
 
 
 class FeedForward:
@@ -29,22 +30,19 @@ class FeedForward:
 		vocablen = len(embeddings)
 		cardinality = reduce(lambda x,y : x * y,shape) # cardinality is the total number of elements in embeddings matrix. \
 												  		# Weight is assigned to each single element.
-		c = embeddings.reshape(cardinality,1) # c is the embedding matrix converted into column matrix to supplement matrix multiplications
-		 
-		M = np.random.rand(self.hidden_dim,cardinality) #  M is the weight matrix between the projection layer and hidden layer
-
+		c = tf.Variable(embeddings.reshape(cardinality,1),name='c') # c is the embedding matrix converted into column matrix to supplement matrix multiplications
+		M = tf.Variable(np.random.rand(self.hidden_dim,cardinality),name='M') #  M is the weight matrix between the projection layer and hidden layer
 		b = "Output layer biases"
 		d = "Hidden layer biases with h units"
+		U = tf.Variable(np.random.rand(vocablen,h),name='U') # Weight matrix hidden-to-output layer
+		W = tf.Variable(np.random.rand(vocablen,cardinality),name='W') # Weight matrix word-features to output.
 
-		U = np.random.rand(vocablen,h) # Weight matrix hidden-to-output layer
-		W = np.random.rand(vocablen,cardinality) # Weight matrix word-features to output.
-
-		# After adding biases to it, perform tanh on this for non linear activation
-	return c,M,d,U,W 
+		
 
 	#def feedforward():
+	def train():
 
-	Hidden = np.dot(M,c) # Hidden layer neurons
+		Hidden = np.dot(M,c) # Hidden layer neurons
 
 
 	#ravelled = r 
