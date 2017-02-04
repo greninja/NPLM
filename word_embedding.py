@@ -15,7 +15,7 @@ data_index = 0
 def cosine_similarity(vec1,vec2):
 	assert len(vec1)==len(vec2)
 	numerator = sum(map(lambda x,y : x * y, vec1,vec2)) 
-	denominator = math.sqrt((sum(map(lambda x : x**2 , vec1))) * (sum(map(lambda x : x ** 2, vec2))))
+	denominator = np.sqrt((sum(map(lambda x : x**2 , vec1))) * (sum(map(lambda x : x ** 2, vec2))))
 	assert denominator != 0
 	return float(numerator) / denominator 
 
